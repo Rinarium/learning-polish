@@ -23,6 +23,11 @@ interface ExerciseProps {
   originalForm: string;
 }
 
+interface Response {
+  exercise: string;
+  original_form: string;
+}
+
 const Exercise = ({ text, originalForm }: ExerciseProps) => {
   const [inputValue, setInputValue] = useState('');
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
@@ -106,7 +111,7 @@ export default function Page() {
               </div>
             );
           }
-          const exercises = JSON.parse(message.content).exercises
+          const exercises = JSON.parse(message.content).exercises as Response[];
           return (
             <div
               key={message.id}
@@ -115,12 +120,6 @@ export default function Page() {
               <div className="text-xs mb-2 text-zinc-400">
                 Asystent
               </div>
-              {/* {exercises.map(exercise => (
-                <div key={exercise.original_form} className='flex'>
-                  <div className="w-full">{exercise.exercise}</div>
-                  <div className="w-full">{exercise.original_form}</div>
-                </div>
-              ))} */}
               {exercises.map(exercise => (
                 <Exercise
                   key={exercise.original_form}
