@@ -123,6 +123,7 @@ export default function Page() {
               ))} */}
               {exercises.map(exercise => (
                 <Exercise
+                  key={exercise.original_form}
                   text={exercise.exercise}
                   originalForm={exercise.original_form}
                 />
