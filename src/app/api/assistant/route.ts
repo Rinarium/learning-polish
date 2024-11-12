@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
   return AssistantResponse(
     { threadId, messageId: createdMessage.id },
-    async ({ forwardStream, sendMessage }) => {
+    async ({ sendMessage }) => {
       const run = await openai.beta.threads.runs.createAndPoll(threadId, {
         assistant_id:
           process.env.ASSISTANT_ID ??
