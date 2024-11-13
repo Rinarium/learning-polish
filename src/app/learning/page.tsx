@@ -1,7 +1,7 @@
 'use client';
 
 import { Message, useAssistant } from 'ai/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 function parseAsteriskText(input: string): {
   firstPart: string;
@@ -28,6 +28,33 @@ interface Response {
   original_form: string;
 }
 
+const AssistentLoader = () => {
+  const [dotCount, setDotCount] = useState(1);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setDotCount((prev) => (prev === 3 ? 1 : prev + 1));
+    }, 250);
+    
+    return () => clearInterval(intervalId);
+  }, []);
+
+  const dots = '.'.repeat(dotCount);
+  
+  return (
+    <div
+      className="flex flex-col w-full min-h-10 p-4 rounded bg-zinc-800 animate-fade-in animate-pulse"
+    >
+      <div className="text-xs mb-2 text-zinc-400">
+        Asystent
+      </div>
+      <div>
+        {dots}
+      </div>
+    </div>
+  )
+}
+
 const Exercise = ({ text, originalForm }: ExerciseProps) => {
   const [inputValue, setInputValue] = useState('');
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
@@ -47,7 +74,6 @@ const Exercise = ({ text, originalForm }: ExerciseProps) => {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    console.log('haha', e)
     if (e.key === "Enter") {
       if (inputValue === correctAnswer) {
         setIsCorrect(true);
@@ -58,7 +84,7 @@ const Exercise = ({ text, originalForm }: ExerciseProps) => {
   };
 
   return (
-    <div className='inline whitespace-pre-wrap my-2'>
+    <div className='inline whitespace-pre-wrap my-2 animate-fade-in'>
       <span>
         {firstPart}
       </span>
@@ -68,11 +94,11 @@ const Exercise = ({ text, originalForm }: ExerciseProps) => {
         value={inputValue}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
-        // disabled={isCorrect !== null}
         className={
-          `inline mx-1 mr-2 rounded bg-zinc-500 px-2 text-center
+          `inline mx-1 mr-2 rounded px-2 text-center
           ${isCorrect === true ? "bg-green-200 text-black" : ""}
-          ${isCorrect === false ? "bg-red-200 text-black" : ""}`
+          ${isCorrect === false ? "bg-red-200 text-black" : ""}
+          ${isCorrect === null ? "bg-zinc-500" : ""}`
         }
         style={{ width: `${correctAnswer.length + 1 }ch`}}
       />
@@ -80,8 +106,13 @@ const Exercise = ({ text, originalForm }: ExerciseProps) => {
         {secondPart}
       </span>
       {isCorrect === false &&
-        <span className='mx-4 text-green-200'>
+        <span className='mx-4 rounded bg-green-200 px-3 py-0.5 text-black animate-fade-in'>
           {correctAnswer}
+        </span>
+      }
+      {isCorrect === null && inputValue &&
+        <span className='mx-4 rounded bg-slate-50 px-3 py-0.5 text-black animate-fade-in'>
+          {originalForm}
         </span>
       }
     </div>
@@ -89,12 +120,19 @@ const Exercise = ({ text, originalForm }: ExerciseProps) => {
 }
 
 export default function Page() {
-  const { status, messages, input, submitMessage, handleInputChange } =
+  const { status, messages, input, setMessages, submitMessage, handleInputChange } =
     useAssistant({ api: '/api/assistant' });
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="p-2">status: {status}</div>
+      <div className="m-4">
+        <button
+          onClick={() => setMessages([])}
+          className='transition duration-150 ease-in-out rounded bg-purple-700 hover:scale-110 hover:bg-indigo-500 max-w-48 p-2'
+        >
+          Wyczyść czat
+        </button>
+      </div>
 
       <div className="flex flex-col m-4 gap-4">
         {messages.map((message: Message) => {
@@ -102,7 +140,7 @@ export default function Page() {
             return (
               <div
                 key={message.id}
-                className="flex flex-col w-full min-h-10 p-3 rounded bg-zinc-800"
+                className="flex flex-col w-full min-h-10 p-4 rounded bg-zinc-800"
               >
                 <div className="text-xs mb-2 text-zinc-400">
                   Twoje powiadomienie
@@ -115,14 +153,14 @@ export default function Page() {
           return (
             <div
               key={message.id}
-              className="flex flex-col w-full min-h-10 p-3 rounded bg-zinc-800"
+              className="flex flex-col w-full min-h-10 p-4 rounded bg-zinc-800"
             >
               <div className="text-xs mb-2 text-zinc-400">
                 Asystent
               </div>
-              {exercises.map(exercise => (
+              {exercises.map((exercise, index) => (
                 <Exercise
-                  key={exercise.original_form}
+                  key={`${exercise.original_form}-${index}`}
                   text={exercise.exercise}
                   originalForm={exercise.original_form}
                 />
@@ -130,22 +168,29 @@ export default function Page() {
             </div>
           );
         })}
-      </div>
 
-      <form
-        onSubmit={submitMessage}
-        className="flex flex-col w-full min-h-10 mx-4 p-3 rounded bg-zinc-800"
-      >
-        <div className="text-xs mb-2 text-zinc-400">
-          Twoje powiadomienie
-        </div>
-        <input
-          disabled={status !== 'awaiting_message'}
-          value={input}
-          onChange={handleInputChange}
-          className="rounded bg-zinc-800 px-2"
-        />
-      </form>
+        { status === 'in_progress' &&
+          <AssistentLoader />
+        }
+
+       { status === 'awaiting_message' &&
+          <form
+            onSubmit={submitMessage}
+            className="flex flex-col w-full min-h-10 p-4 rounded bg-zinc-800 animate-fade-in"
+          >
+            <div className="text-xs mb-2 text-zinc-400">
+              Twoje powiadomienie
+            </div>
+            <input
+              disabled={status !== 'awaiting_message'}
+              value={input}
+              placeholder='Napisz tu temat albo słowo, które chcesz poćwiczyć'
+              onChange={handleInputChange}
+              className="rounded bg-zinc-800"
+            />
+          </form>
+        }
+      </div>
     </div>
   );
 }
